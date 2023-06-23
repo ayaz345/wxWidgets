@@ -58,24 +58,23 @@ class Builder:
         programPath = self.getProgramPath()
         if os.path.exists(programPath):
             return True
-        else:
             # check the PATH for the program
             # TODO: How do we check if we're in Cygwin?
-            if sys.platform.startswith("win"):
-                result = os.system(self.name)
-                if result == 0:
-                    return True
-                dirs = os.environ["PATH"].split(":")
+        if sys.platform.startswith("win"):
+            result = os.system(self.name)
+            if result == 0:
+                return True
+            dirs = os.environ["PATH"].split(":")
 
-                for dir in dirs:
-                    if os.path.isfile(os.path.join(dir, self.name)):
-                        return True  
+            for dir in dirs:
+                if os.path.isfile(os.path.join(dir, self.name)):
+                    return True  
 
-            else:
-                result = os.system("which %s" % self.name)
+        else:
+            result = os.system(f"which {self.name}")
 
-                if result == 0:
-                    return True
+            if result == 0:
+                return True
 
         return False
 
@@ -83,7 +82,7 @@ class Builder:
         if self.programDir:
             path = os.path.join(self.programDir, self.name)
             if sys.platform.startswith("win"):
-                path = '"%s"' % path
+                path = f'"{path}"'
             return path
 
         return self.name
@@ -99,18 +98,15 @@ class Builder:
         dir = the directory containing the project file
         projectFile = Some formats need to explicitly specify the project file's name
         """
-        if self.isAvailable():
-            args = [self.getProgramPath()]
-            pfArg = self.getProjectFileArg(projectFile)
-            if pfArg:
-                args.extend(pfArg)
-            args.append("clean")
-            if options:
-                args.extend(options)
-            result = runInDir(args, dir)
-            return result
-
-        return False
+        if not self.isAvailable():
+            return False
+        args = [self.getProgramPath()]
+        if pfArg := self.getProjectFileArg(projectFile):
+            args.extend(pfArg)
+        args.append("clean")
+        if options:
+            args.extend(options)
+        return runInDir(args, dir)
 
     def configure(self, dir=None, options=[]):
         # if we don't have configure, just report success
@@ -119,32 +115,26 @@ class Builder:
     def build(self, dir=None, projectFile=None, targets=None, options=[]):
         if self.isAvailable():
             args = [self.getProgramPath()]
-            pfArg = self.getProjectFileArg(projectFile)
-            if pfArg:
+            if pfArg := self.getProjectFileArg(projectFile):
                 args.extend(pfArg)
             # Important Note: if extending args, check it first!
             # NoneTypes are not iterable and will crash the clean, build, or install!
             # Very very irritating when this happens right at the end.
             if options: 
                 args.extend(options)
-            result = runInDir(args, dir)
-            return result
-
+            return runInDir(args, dir)
         return 1
 
     def install(self, dir=None, projectFile=None, options=[]):
-        if self.isAvailable():
-            args = [self.getProgramPath()]
-            pfArg = self.getProjectFileArg(projectFile)
-            if pfArg:
-                args.extend(pfArg)
-            args.append("install")
-            if options:
-                args.extend(options)
-            result = runInDir(args, dir)
-            return result
-
-        return 1
+        if not self.isAvailable():
+            return 1
+        args = [self.getProgramPath()]
+        if pfArg := self.getProjectFileArg(projectFile):
+            args.extend(pfArg)
+        args.append("install")
+        if options:
+            args.extend(options)
+        return runInDir(args, dir)
 
 
 # Concrete subclasses of abstract Builder interface
@@ -189,11 +179,9 @@ class AutoconfBuilder(GNUMakeBuilder):
             return 1
 
         optionsStr = " ".join(options) if options else ""
-        command = "%s %s" % (configure_cmd, optionsStr)
+        command = f"{configure_cmd} {optionsStr}"
         print(command)
-        result = os.system(command)
-        #os.chdir(olddir)
-        return result
+        return os.system(command)
 
 
 class MSVCBuilder(Builder):
@@ -202,10 +190,7 @@ class MSVCBuilder(Builder):
 
     def isAvailable(self):
         PATH = os.environ['PATH'].split(os.path.pathsep)
-        for p in PATH:
-            if os.path.exists(os.path.join(p, self.name)):
-                return True
-        return False
+        return any(os.path.exists(os.path.join(p, self.name)) for p in PATH)
 
     def getProjectFileArg(self, projectFile = None):
         result = []
@@ -222,7 +207,7 @@ class MSVCProjectBuilder(Builder):
             if os.environ.has_key(key):
                 self.programDir = os.path.join(os.environ[key], "..", "IDE")
 
-        if self.programDir == None:
+        if self.programDir is None:
             for version in ["9.0", "8", ".NET 2003"]:
                 msvcDir = "C:\\Program Files\\Microsoft Visual Studio %s\\Common7\\IDE" % version
                 if os.path.exists(msvcDir):
@@ -233,13 +218,12 @@ class MSVCProjectBuilder(Builder):
             path = os.path.join(self.programDir, self.name)
             if os.path.exists(path):
                 return True
-            else:
-                # I don't have commercial versions of MSVC so I can't test this
-                name = "devenv.com"
-                path = os.path.join(self.programDir, name)
-                if os.path.exists(path):
-                    self.name = "devenv.com"
-                    return True
+            # I don't have commercial versions of MSVC so I can't test this
+            name = "devenv.com"
+            path = os.path.join(self.programDir, name)
+            if os.path.exists(path):
+                self.name = "devenv.com"
+                return True
 
         return False
 

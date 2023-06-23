@@ -51,7 +51,7 @@ def addNode(project, groupName, entries, fileGroups, targets):
             varname = entry[2:-1]
             addNode(project, groupName, fileGroups[varname], fileGroups, targets)
         else:
-            project.add_file("../../"+entry, parent=group, target_name=targets)
+            project.add_file(f"../../{entry}", parent=group, target_name=targets)
 
 
 def populateProject(projectfile, fileGroups, nodes):
@@ -94,16 +94,16 @@ def readFilesList(bklFileList, conditions):
 
 def makeProject(projectName, conditions):
     # make new copy from template
-    template = os.path.join(osxBuildFolder, projectName + "_in.xcodeproj")
-    projectFile = os.path.join(osxBuildFolder, projectName + ".xcodeproj")
+    template = os.path.join(osxBuildFolder, f"{projectName}_in.xcodeproj")
+    projectFile = os.path.join(osxBuildFolder, f"{projectName}.xcodeproj")
     if os.path.exists(projectFile):
         shutil.rmtree(projectFile)
     shutil.copytree(template, projectFile)
     # read file list from bkls
     fileGroups = readFilesList(bklfiles, conditions)
     # create xcode project
-    populateProject(projectFile + "/project.pbxproj", fileGroups, nodes)
-    processFile(projectFile + "/project.pbxproj")
+    populateProject(f"{projectFile}/project.pbxproj", fileGroups, nodes)
+    processFile(f"{projectFile}/project.pbxproj")
 
 osxBuildFolder = os.getcwd()
 

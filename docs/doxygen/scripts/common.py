@@ -144,10 +144,7 @@ excluded_classes = [
         ]
 
 def get_first_value(alist):
-    if len(alist) > 0:
-        return alist[0]
-    else:
-        return ""
+    return alist[0] if len(alist) > 0 else ""
 
 def make_enums(aclass):
     retval = ""
@@ -155,8 +152,8 @@ def make_enums(aclass):
         retval += "enum %s {\n" % enum
         num_values = len(aclass.enums[enum])
         for value in aclass.enums[enum]:
-            retval += "    %s" % value
-            if not value == aclass.enums[enum][-1]:
+            retval += f"    {value}"
+            if value != aclass.enums[enum][-1]:
                 retval += ", "
             retval += "\n"
         retval += "};\n\n"

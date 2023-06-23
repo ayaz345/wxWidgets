@@ -9,7 +9,7 @@ import sys
 import plistlib
 
 # The first argument is the plist filename without the extension
-fname = sys.argv[1] + ".plist"
+fname = f"{sys.argv[1]}.plist"
 
 # The second argument is the key to replace
 key = sys.argv[2]

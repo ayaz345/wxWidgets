@@ -28,7 +28,13 @@ if __name__ == "__main__":
         action = "store"
         if type(default) == types.BooleanType:
             action = "store_true"
-        parser.add_option("--" + opt, default=default, action=action, dest=opt, help=option_dict[opt][1])
+        parser.add_option(
+            f"--{opt}",
+            default=default,
+            action=action,
+            dest=opt,
+            help=option_dict[opt][1],
+        )
 
     options, arguments = parser.parse_args()
 

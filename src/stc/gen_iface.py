@@ -73,15 +73,15 @@ FUNC_FOR_CMD = 1
 GENERATE_PROVISIONAL_ITEMS = 0
 
 # No wxSTC value will be generated for the following Scintilla values.
-notMappedSciValues = set([
+notMappedSciValues = {
     'SC_TECHNOLOGY_DIRECTWRITERETAIN',
     'SC_TECHNOLOGY_DIRECTWRITEDC',
     'INDIC0_MASK',
     'INDIC1_MASK',
     'INDIC2_MASK',
     'INDICS_MASK',
-    'SCFIND_CXX11REGEX'
-])
+    'SCFIND_CXX11REGEX',
+}
 
 # Map some generic typenames to wx types, using return value syntax
 retTypeMap = {
@@ -142,13 +142,10 @@ retTypeMap = {
     'WrapVisualLocation': 'int',
     }
 
-# Map some generic typenames to wx types, using parameter syntax
-paramTypeMap = retTypeMap.copy()
-paramTypeMap.update({
+paramTypeMap = retTypeMap | {
     'string': 'const wxString&',
     'colour': 'const wxColour&',
-    })
-
+}
 # Map of method info that needs tweaked.  Either the name needs changed, or
 # the method definition/implementation.  Tuple items are:
 #
@@ -1242,7 +1239,7 @@ def processIface(iface, h_tmplt, cpp_tmplt, ih_tmplt, h_dest, cpp_dest, docstr_d
             parseVal(line[4:], values, curDocStrings, icat)
             curDocStrings = []
 
-        elif op == 'fun ' or op == 'set ' or op == 'get ':
+        elif op in ['fun ', 'set ', 'get ']:
             parseFun(line[4:], methods, curDocStrings, cmds, op == 'get ', msgcodes, icat)
             curDocStrings = []
 
@@ -1259,11 +1256,8 @@ def processIface(iface, h_tmplt, cpp_tmplt, ih_tmplt, h_dest, cpp_dest, docstr_d
         elif op == 'lex ':
             pass
 
-        elif op == 'ali ':
-            pass
-
-        else:
-            print('***** Unknown line type: %s' % line)
+        elif op != 'ali ':
+            print(f'***** Unknown line type: {line}')
 
     # build the items for the table of contents in the interface header
     tableitems=''
@@ -1276,8 +1270,7 @@ def processIface(iface, h_tmplt, cpp_tmplt, ih_tmplt, h_dest, cpp_dest, docstr_d
         tableitems+='    - @ref_member_group{'+category+', '+title+'}'
 
     # process templates
-    data = {}
-    data['VALUES'] = processVals(values)
+    data = {'VALUES': processVals(values)}
     data['CMDS']   = processVals(cmds)
     defs, imps, docstrings, idefs = processMethods(methods)
     data['METHOD_DEFS'] = defs
@@ -1333,9 +1326,8 @@ def processHeader(hdr_scn, codeDict):
         symbname = tokens[0]
         symbval = tokens[1]
         if symbname[:4] == 'SCI_':
-            # add symbol and its value to the dictionary
             if symbval in codeDict:
-                print("***** Duplicated message code for " + symbname)
+                print(f"***** Duplicated message code for {symbname}")
             else:
                 codeDict[symbval] = symbname
 
@@ -1346,9 +1338,8 @@ def processVals(values):
     for name, value, docs in values:
         if docs:
             text.append('')
-            for x in docs:
-                text.append('/// ' + x)
-        text.append('#define %s %s' % (name, value))
+            text.extend(f'/// {x}' for x in docs)
+        text.append(f'#define {name} {value}')
     return joinWithNewLines(text)
 
 #----------------------------------------------------------------------------

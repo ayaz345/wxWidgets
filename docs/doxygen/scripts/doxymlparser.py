@@ -68,7 +68,7 @@ class MethodDefinition:
         self.detailed_description = ""
 
     def __str__(self):
-        str_repr = """
+        return """
 Method: %s
 Return Type: %s
 Params: %r
@@ -78,8 +78,14 @@ Brief Description:
 
 Detailed Description:
 %s
-""" % (self.name, self.return_type, self.params, self.definition + self.argsstring, self.brief_description, self.detailed_description)
-        return str_repr
+""" % (
+            self.name,
+            self.return_type,
+            self.params,
+            self.definition + self.argsstring,
+            self.brief_description,
+            self.detailed_description,
+        )
 
 def getTextValue(node, recursive=False):
     text = ""
@@ -88,7 +94,7 @@ def getTextValue(node, recursive=False):
             text += getTextValue(child)
         if child.nodeType == child.TEXT_NODE:
             # Add a space to ensure we have a space between qualifiers and parameter names
-            text += child.nodeValue.strip() + " "
+            text += f"{child.nodeValue.strip()} "
 
     return text.strip()
 
@@ -101,15 +107,11 @@ class DoxyMLParser:
         self.verbose = verbose
 
     def find_class(self, name):
-        for aclass in self.classes:
-            if aclass.name == name:
-                return aclass
-
-        return None
+        return next((aclass for aclass in self.classes if aclass.name == name), None)
 
     def get_enums_and_functions(self, filename, aclass):
         file_path = os.path.dirname(filename)
-        enum_filename = os.path.join(file_path, aclass.name[2:] + "_8h.xml")
+        enum_filename = os.path.join(file_path, f"{aclass.name[2:]}_8h.xml")
         if os.path.exists(enum_filename):
             root = minidom.parse(enum_filename).documentElement
             for method in root.getElementsByTagName("memberdef"):
@@ -123,9 +125,7 @@ class DoxyMLParser:
             if base == abase:
                 return True
 
-            parentclass = self.find_class(base)
-
-            if parentclass:
+            if parentclass := self.find_class(base):
                 base = get_first_value(parentclass.bases)
             else:
                 base = None

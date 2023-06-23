@@ -18,7 +18,7 @@ def ReadScriptTable():
         print("Did you run the script from top-level wxWidgets directory?")
         raise
 
-    for i in f.readlines():
+    for i in f:
         ispl = i.split()
         scripttable.append((ispl[0], ispl[1]))
     f.close()
@@ -32,7 +32,7 @@ def ReadSynonymTable():
         print("Did you run the script from top-level wxWidgets directory?")
         raise
 
-    for i in f.readlines():
+    for i in f:
         ispl = i.split()
         synonymtable.append((ispl[0], ispl[1], ispl[2], ispl[3]))
     f.close()
@@ -46,7 +46,7 @@ def ReadTable():
         print("Did you run the script from top-level wxWidgets directory?")
         raise
 
-    for i in f.readlines():
+    for i in f:
         ispl = i.split()
         table.append((ispl[0], ispl[1], ispl[2], ispl[3], ispl[4], ispl[5], ispl[6], ispl[7], ' '.join(ispl[8:])))
     f.close()
@@ -55,7 +55,7 @@ def ReadTable():
 
 # Kind may be "include" or "interface".
 def WriteEnum(f, table, synonymtable, scripttable, kind = 'include'):
-   f.write("""
+    f.write("""
 enum wxLanguage
 {
     /// User's default/preferred language as got from OS.
@@ -65,75 +65,86 @@ enum wxLanguage
     wxLANGUAGE_UNKNOWN,
 
 """);
-   knownLangs = []
-   output = ''
-   for i in table:
-       lang = i[0]
-       wxver = i[1]
-       if lang not in knownLangs:
-          output += '    %s,' % lang
-          if kind == 'interface' and wxver != '-':
-              output += '%s///< @since_wx{%s}' % (' ' * (56 - len(lang)), wxver)
-          output += '\n'
-          knownLangs.append(lang)
-   output += """
+    knownLangs = []
+    output = ''
+    for i in table:
+        lang = i[0]
+        wxver = i[1]
+        if lang not in knownLangs:
+            output += f'    {lang},'
+            if kind == 'interface' and wxver != '-':
+                output += '%s///< @since_wx{%s}' % (' ' * (56 - len(lang)), wxver)
+            output += '\n'
+            knownLangs.append(lang)
+    output += """
     /// For custom, user-defined languages.
     wxLANGUAGE_USER_DEFINED,
 """
 
-   if kind == 'include':
-      output += '\n    /// Synonyms.'
+    if kind == 'include':
+       output += '\n    /// Synonyms.'
 
-   output += '\n'
+    output += '\n'
 
-   for i in synonymtable:
-      lang = i[0]
-      synonym = i[1]
-      wxver = i[3]
-      output += '    %s' % lang
-      if kind == 'include':
-         output += ' = %s,\n' % synonym
-      elif kind == 'interface':
-         if wxver != '-':
-           output += ',%s///< Synonym for %s. @since_wx{%s}\n' % (' ' * (42 - len(lang)), synonym, wxver)
-         else:
-           output += ',%s///< Synonym for %s.\n' % (' ' * (42 - len(lang)), synonym)
-      else:
-        print("Unknown kind of generated enum")
-        raise
+    for i in synonymtable:
+        lang = i[0]
+        synonym = i[1]
+        wxver = i[3]
+        output += f'    {lang}'
+        if kind == 'include':
+           output += ' = %s,\n' % synonym
+        elif kind == 'interface':
+           if wxver != '-':
+             output += ',%s///< Synonym for %s. @since_wx{%s}\n' % (' ' * (42 - len(lang)), synonym, wxver)
+           else:
+             output += ',%s///< Synonym for %s.\n' % (' ' * (42 - len(lang)), synonym)
+        else:
+          print("Unknown kind of generated enum")
+          raise
 
-   output += '};\n\n'
-   f.write(output)
+    output += '};\n\n'
+    f.write(output)
 
 def WriteTable(f, table, synonymtable, scripttable):
-   sctable = ''
-   for i in scripttable:
-       scname = '"%s"' % i[0]
-       scalias = '"%s"' % i[1]
-       sctable += '    { %s, %s },\n' % (scname, scalias)
+    sctable = ''
+    for i in scripttable:
+        scname = f'"{i[0]}"'
+        scalias = f'"{i[1]}"'
+        sctable += '    { %s, %s },\n' % (scname, scalias)
 
-   lngtable = ''
+    lngtable = ''
 
-   for i in table:
-       ibcp47 = '"%s"' % i[2]
-       ican = '"%s"' % i[3]
-       if ican == '"-"': ican = '""'
-       icanbase = '"%s"' % i[4]
-       if icanbase == '"-"': icanbase = '""'
-       ilang = i[5]
-       if ilang == '-': ilang = '0'
-       isublang = i[6]
-       if isublang == '-': isublang = '0'
-       if (i[7] == "LTR") :
-           ilayout = "wxLayout_LeftToRight"
-       elif (i[7] == "RTL"):
-           ilayout = "wxLayout_RightToLeft"
-       else:
-           print("ERROR: Invalid value for the layout direction")
-       lngtable += '    { %-60s %-17s, %-28s, %-15s, %-4s, %-4s, %s, %s },\n' % \
-                     ((i[0]+','), ibcp47, ican, icanbase, ilang, isublang, ilayout, i[8])
+    for i in table:
+        ibcp47 = f'"{i[2]}"'
+        ican = f'"{i[3]}"'
+        if ican == '"-"': ican = '""'
+        icanbase = f'"{i[4]}"'
+        if icanbase == '"-"': icanbase = '""'
+        ilang = i[5]
+        if ilang == '-': ilang = '0'
+        isublang = i[6]
+        if isublang == '-': isublang = '0'
+        if (i[7] == "LTR") :
+            ilayout = "wxLayout_LeftToRight"
+        elif (i[7] == "RTL"):
+            ilayout = "wxLayout_RightToLeft"
+        else:
+            print("ERROR: Invalid value for the layout direction")
+        lngtable += (
+            '    { %-60s %-17s, %-28s, %-15s, %-4s, %-4s, %s, %s },\n'
+            % (
+                f'{i[0]},',
+                ibcp47,
+                ican,
+                icanbase,
+                ilang,
+                isublang,
+                ilayout,
+                i[8],
+            )
+        )
 
-   f.write("""
+    f.write("""
 // The following data tables are generated by misc/languages/genlang.py
 // When making changes, please put them into misc/languages/langtabl.txt
 
@@ -219,36 +230,34 @@ def ReplaceGeneratedPartOfFile(fname, func):
         a file and language table on input and writing the appropriate chunk to
         this file, e.g. WriteEnum or WriteTable.
     """
-    fin = open(fname, 'rt')
-    fnameNew = fname + '.new'
-    fout = open(fnameNew, 'wt')
-    betweenBeginAndEnd = 0
-    afterEnd = 0
-    for l in fin.readlines():
-        if l == '// --- --- --- generated code begins here --- --- ---\n':
-            if betweenBeginAndEnd or afterEnd:
-                print('Unexpected starting comment.')
-            betweenBeginAndEnd = 1
-            fout.write(l)
-            func(fout, table, synonymtable, scripttable)
-        elif l == '// --- --- --- generated code ends here --- --- ---\n':
-            if not betweenBeginAndEnd:
-                print('End comment found before the starting one?')
-                break
-
+    with open(fname, 'rt') as fin:
+        fnameNew = f'{fname}.new'
+        with open(fnameNew, 'wt') as fout:
             betweenBeginAndEnd = 0
-            afterEnd = 1
+            afterEnd = 0
+            for l in fin:
+                if l == '// --- --- --- generated code begins here --- --- ---\n':
+                    if betweenBeginAndEnd or afterEnd:
+                        print('Unexpected starting comment.')
+                    betweenBeginAndEnd = 1
+                    fout.write(l)
+                    func(fout, table, synonymtable, scripttable)
+                elif l == '// --- --- --- generated code ends here --- --- ---\n':
+                    if not betweenBeginAndEnd:
+                        print('End comment found before the starting one?')
+                        break
 
-        if not betweenBeginAndEnd:
-            fout.write(l)
+                    betweenBeginAndEnd = 0
+                    afterEnd = 1
 
-    if not afterEnd:
-        print('Failed to process %s.' % fname)
-        os.remove(fnameNew)
-        sys.exit(1)
+                if not betweenBeginAndEnd:
+                    fout.write(l)
 
-    fout.close()
-    fin.close()
+            if not afterEnd:
+                print(f'Failed to process {fname}.')
+                os.remove(fnameNew)
+                sys.exit(1)
+
     os.remove(fname)
     os.rename(fnameNew, fname)
 

@@ -28,47 +28,55 @@ class CBuilder:
 
 
     def make_c_header(self, output_dir, aclass):
-            filename = os.path.join(output_dir, aclass.name[2:].lower() + ".hh")
-            enums_text = make_enums(aclass)
-            method_text = self.make_c_methods(aclass)
-            class_name = aclass.name[2:].capitalize()
-            text = """
+        filename = os.path.join(output_dir, f"{aclass.name[2:].lower()}.hh")
+        enums_text = make_enums(aclass)
+        method_text = self.make_c_methods(aclass)
+        class_name = aclass.name[2:].capitalize()
+        text = """
 // Enums
 %s
 
 %s
 """ % (enums_text, method_text)
 
-            afile = open(filename, "wb")
+        with open(filename, "wb") as afile:
             afile.write(text)
-            afile.close()
 
 
     def make_c_methods(self, aclass):
-        retval = ""
+        wxc_classname = f'wxC{aclass.name[2:].capitalize()}'
 
-        wxc_classname = 'wxC' + aclass.name[2:].capitalize()
-
-        for amethod in aclass.constructors:
-            retval += """
+        retval = "".join(
+            """
 // %s
 %s%s;\n\n
-""" % (amethod.brief_description, wxc_classname + '* ' + wxc_classname + '_' + amethod.name, amethod.argsstring)
-
+"""
+            % (
+                amethod.brief_description,
+                f'{wxc_classname}* {wxc_classname}_{amethod.name}',
+                amethod.argsstring,
+            )
+            for amethod in aclass.constructors
+        )
         for amethod in aclass.methods:
             if amethod.name.startswith('m_'):
                 # for some reason, public members are listed as methods
                 continue
 
-            args = '(' + wxc_classname + '* obj'
+            args = f'({wxc_classname}* obj'
             if amethod.argsstring.find('()') != -1:
                 args += ')'
             else:
-                args += ', ' + amethod.argsstring[1:].strip()
+                args += f', {amethod.argsstring[1:].strip()}'
 
             retval += """
 // %s
 %s %s%s;\n
-""" % (amethod.detailed_description, amethod.return_type, wxc_classname + '_' + amethod.name, args)
+""" % (
+                amethod.detailed_description,
+                amethod.return_type,
+                f'{wxc_classname}_{amethod.name}',
+                args,
+            )
 
         return retval

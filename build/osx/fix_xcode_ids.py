@@ -42,7 +42,7 @@ def insertBuildFileEntry(filePath, fileRefId):
     matchBuildFileSection = re.search("/\* Begin PBXBuildFile section \*/\n", strIn)
     dirName, fileName = os.path.split(filePath)
 
-    fileInSources = fileName + " in Sources"
+    fileInSources = f"{fileName} in Sources"
     id = toUuid(fileInSources)
     idDict[id] = id
     insert = "\t\t%s /* %s */ = {isa = PBXBuildFile; fileRef = %s /* %s */; };\n" % (
@@ -84,7 +84,7 @@ def insertSourcesBuildPhaseEntry(id, fileName, insertBeforeFileName, startSearch
             + strIn[matchBuildPhase.start():]
 
     print("OK")
-    return matchBuildPhase.start() + len(insert) + len(matchBuildPhase.group(0))
+    return matchBuildPhase.start() + len(insert) + len(matchBuildPhase[0])
 
 
 # Detect and fix errors in the project file that might have been introduced.
@@ -159,15 +159,12 @@ def repl(match):
 def processFile(projectFile):
     global strIn
 
-    fin = open(projectFile, "r")
-    strIn = fin.read()
-    fin.close()
-
+    with open(projectFile, "r") as fin:
+        strIn = fin.read()
     strOut = processContent()
 
-    fout = open(projectFile, "w")
-    fout.write(strOut)
-    fout.close()
+    with open(projectFile, "w") as fout:
+        fout.write(strOut)
 
 
 def processContent():
@@ -175,20 +172,19 @@ def processContent():
     global idDict
 
     rc = re.compile(".+ (?P<path1>[\w/.]+(\.cpp|\.cxx|\.c))(?P<path2>\w+/[\w/.]+).+")
-    matchLine = rc.search(strIn)
-    while matchLine:
-        line = matchLine.group(0)
+    while matchLine := rc.search(strIn):
+        line = matchLine[0]
 
         # is it a line from the PBXFileReference section containing 2 mixed paths?
         # example:
         # FEDCBA9876543210FEDCBA98 /* file2.cpp */ = {isa = PBXFileReference; lastKnownFileType = file; name = file2.cpp; path = ../../src/html/file1.cppsrc/html/file2.cpp; sourceTree = "<group>"; };
         if line.endswith("};"):
-            path1 = matchLine.group('path1')
-            path2 = matchLine.group('path2')
-            print("Correcting mixed paths '%s' and '%s' at '%s':" % (path1, path2, line))
+            path1 = matchLine['path1']
+            path2 = matchLine['path2']
+            print(f"Correcting mixed paths '{path1}' and '{path2}' at '{line}':")
             # if so, make note of the ID used (belongs to path2), remove the line
             # and split the 2 paths inserting 2 new entries inside PBXFileReference
-            fileRefId2 = re.search(idMask, line).group(0)
+            fileRefId2 = re.search(idMask, line)[0]
 
             print("\tDelete the offending PBXFileReference line...")
             # delete the PBXFileReference line that was found and which contains 2 mixed paths
@@ -201,17 +197,17 @@ def processContent():
             # do the same for path2 (which already had a ID)
             path2Corrected = path2
             if path2Corrected.startswith('src'):
-                path2Corrected = '../../' + path2Corrected
+                path2Corrected = f'../../{path2Corrected}'
 
             insertFileRefEntry(path2Corrected, fileRefId2)
 
-            buildPhaseId = {}
             # insert a PBXBuildFile entry, 1 for each target
             # path2 already has correct PBXBuildFile entries
             targetCount = strIn.count("isa = PBXSourcesBuildPhase")
-            for i in range(0, targetCount):
-                buildPhaseId[i] = insertBuildFileEntry(path1, fileRefId1)
-
+            buildPhaseId = {
+                i: insertBuildFileEntry(path1, fileRefId1)
+                for i in range(0, targetCount)
+            }
             fileName1 = os.path.split(path1)[1]
             dir2, fileName2 = os.path.split(path2)
 
@@ -224,8 +220,7 @@ def processContent():
             matchGroupStart = re.search("/\* %s \*/ = {" % dir2, strIn)
             endGroupIndex = strIn.find("};", matchGroupStart.start())
 
-            for matchGroupLine in re.compile(".+" + idMask + " /\* (.+) \*/,").finditer(strIn, matchGroupStart.start(),
-                                                                                        endGroupIndex):
+            for matchGroupLine in re.compile(f".+{idMask}" + " /\* (.+) \*/,").finditer(strIn, matchGroupStart.start(), endGroupIndex):
                 if matchGroupLine.group(1) > fileName1:
                     print("\tInsert paths in PBXGroup '%s', just before '%s'..." % (dir2, matchGroupLine.group(1)))
                     strIn = strIn[:matchGroupLine.start()] \
@@ -237,18 +232,16 @@ def processContent():
                     break
 
         elif line.endswith("*/ = {"):
-            print("Delete invalid PBXGroup starting at '%s'..." % line)
+            print(f"Delete invalid PBXGroup starting at '{line}'...")
             find = "};\n"
             endGroupIndex = strIn.find(find, matchLine.start()) + len(find)
             strIn = strIn[:matchLine.start()] + strIn[endGroupIndex:]
             print("OK")
 
         elif line.endswith(" */,"):
-            print("Delete invalid PBXGroup child '%s'..." % line)
+            print(f"Delete invalid PBXGroup child '{line}'...")
             strIn = strIn[:matchLine.start()] + strIn[matchLine.end() + 1:]
             print("OK")
-
-        matchLine = rc.search(strIn)
 
     # key = original ID found in project
     # value = ID it will be replaced by
@@ -271,20 +264,14 @@ def processContent():
 
     for s in dict:
         # s[0] is the original ID, s[1] is the name
-        assert (not s[0] in idDict)
+        assert s[0] not in idDict
         idDict[s[0]] = toUuid(s[1])
 
-    strOut = re.sub(idMask, repl, strIn)
-    return strOut
+    return re.sub(idMask, repl, strIn)
 
 
 if __name__ == '__main__':
-    if not testFixStage:
-        if len(sys.argv) < 2:
-            print(USAGE)
-            sys.exit(1)
-        processFile(sys.argv[1] + "/project.pbxproj")
-    else:
+    if testFixStage:
         strIn = strTest
         print("------------------------------------------")
         print(strIn)
@@ -293,3 +280,8 @@ if __name__ == '__main__':
         print(strOut)
 
         exit(1)
+    else:
+        if len(sys.argv) < 2:
+            print(USAGE)
+            sys.exit(1)
+        processFile(f"{sys.argv[1]}/project.pbxproj")

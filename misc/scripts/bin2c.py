@@ -21,7 +21,7 @@ for path in sys.argv[1:]:
 
         # Allow only filenames that make sense as C variable names
         if not(m):
-                print("Skipped file (unsuitable filename): " + filename)
+                print(f"Skipped file (unsuitable filename): {filename}")
                 continue
 
         # Read file as character array
@@ -29,9 +29,9 @@ for path in sys.argv[1:]:
         count = len(bytes)
 
         # Create the C header
-        text = "/* %s - %d bytes */\n" \
-               "static const unsigned char %s_%s_data[] = {\n" % (
-                    filename, count, m.group(1), m.group(2))
+        text = ("/* %s - %d bytes */\n"
+                "static const unsigned char %s_%s_data[] = {\n" %
+                (filename, count, m[1], m[2]))
 
         i = 0
         for byte in bytes:

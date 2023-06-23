@@ -1418,15 +1418,9 @@ sinceAnnotations= {
 #----------------------------------------------------------------------------
 
 def buildDocs(name, docs, icat):
-    docsLong = 0
-
     # If an item does not have a category or the category to which it is
     # assigned is not in categoriesList, it will be assigned to 'OtherSettings'
-    if name in docsMap:
-        category = docsMap[name]
-    else:
-        category = 'OtherSettings'
-
+    category = docsMap[name] if name in docsMap else 'OtherSettings'
     if category not in [ x for (x,y,z) in categoriesList]:
         category = 'OtherSettings'
 
@@ -1443,29 +1437,15 @@ def buildDocs(name, docs, icat):
         newdocs[:] = [x for x in newdocs if x.strip()!='']
         docs=tuple(newdocs)
 
-    if name in extendedDocs:
-        docsLong = extendedDocs[name]
-
+    docsLong = extendedDocs[name] if name in extendedDocs else 0
     if icat=='Provisional':
         note = ('','This method is provisional and is subject to change'
                 'in future versions of wxStyledTextCtrl.',)
-        if docsLong==0:
-            docsLong = note
-        else:
-            docsLong = docsLong + note
-
+        docsLong = note if docsLong==0 else docsLong + note
     if name in sinceAnnotations:
-        note = ('@since '+sinceAnnotations[name],)
-        if docsLong==0:
-            docsLong = note
-        else:
-            docsLong = docsLong + note
-
+        note = (f'@since {sinceAnnotations[name]}', )
+        docsLong = note if docsLong==0 else docsLong + note
     if category=='DeprecatedMessages' or icat=='Deprecated':
         note = ('@deprecated',)
-        if docsLong==0:
-            docsLong = note
-        else:
-            docsLong = docsLong + note
-
+        docsLong = note if docsLong==0 else docsLong + note
     return category, docs, docsLong

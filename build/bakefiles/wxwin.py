@@ -15,10 +15,10 @@ try:
     # this fails in 0.1.4 and 0.1.5 has different subst.callbacks signature:
     utils.checkBakefileVersion('0.1.5') 
     def __noopSubst(name, func, caller):
-        return '$(%s)' % name
+        return f'$({name})'
 except AttributeError:
     def __noopSubst(func, name):
-        return '$(%s)' % name
+        return f'$({name})'
 utils.addSubstituteCallback('CFG', __noopSubst)
 utils.addSubstituteCallback('LIBDIRNAME', __noopSubst)
 utils.addSubstituteCallback('SETUPHDIR', __noopSubst)
@@ -30,11 +30,7 @@ def mk_wxid(id):
        follows this convention: DLLs end with 'dll', static libraries
        end with 'lib'. If withPrefix=1, then _wxid is returned instead
        of wxid."""
-    if id.endswith('dll') or id.endswith('lib'):
-        wxid = id[:-3]
-    else:
-        wxid = id
-    return wxid
+    return id[:-3] if id.endswith('dll') or id.endswith('lib') else id
 
 
 # All libs that are part of the main library:
@@ -64,8 +60,8 @@ def mkLibName(wxid):
     if wxid == 'base':
         return '$(WXNAMEPREFIX)$(WXNAMESUFFIX)$(WXVERSIONTAG)$(HOST_SUFFIX)'
     if wxid in LIBS_NOGUI:
-        return '$(WXNAMEPREFIX)$(WXNAMESUFFIX)_%s$(WXVERSIONTAG)$(HOST_SUFFIX)' % wxid
-    return '$(WXNAMEPREFIXGUI)$(WXNAMESUFFIX)_%s$(WXVERSIONTAG)$(HOST_SUFFIX)' % wxid
+        return f'$(WXNAMEPREFIX)$(WXNAMESUFFIX)_{wxid}$(WXVERSIONTAG)$(HOST_SUFFIX)'
+    return f'$(WXNAMEPREFIXGUI)$(WXNAMESUFFIX)_{wxid}$(WXVERSIONTAG)$(HOST_SUFFIX)'
 
 def mkDllName(wxid):
     """Returns string that can be used as DLL name, including name
@@ -76,8 +72,8 @@ def mkDllName(wxid):
     if wxid == 'base':
         return '$(WXDLLNAMEPREFIX)$(WXNAMESUFFIX)$(WXCOMPILER)$(VENDORTAG)$(WXDLLVERSIONTAG)'
     if wxid in LIBS_NOGUI:
-        return '$(WXDLLNAMEPREFIX)$(WXNAMESUFFIX)_%s$(WXCOMPILER)$(VENDORTAG)$(WXDLLVERSIONTAG)' % wxid
-    return '$(WXDLLNAMEPREFIXGUI)$(WXNAMESUFFIX)_%s$(WXCOMPILER)$(VENDORTAG)$(WXDLLVERSIONTAG)' % wxid
+        return f'$(WXDLLNAMEPREFIX)$(WXNAMESUFFIX)_{wxid}$(WXCOMPILER)$(VENDORTAG)$(WXDLLVERSIONTAG)'
+    return f'$(WXDLLNAMEPREFIXGUI)$(WXNAMESUFFIX)_{wxid}$(WXCOMPILER)$(VENDORTAG)$(WXDLLVERSIONTAG)'
 
 
 def libToLink(wxlibname):
@@ -87,16 +83,13 @@ def libToLink(wxlibname):
        mkLibName('foo') (otherwise).
        """
     if wxlibname in MAIN_LIBS:
-        return '$(WXLIB_%s)' % wxlibname.upper()
+        return f'$(WXLIB_{wxlibname.upper()})'
     else:
         return mkLibName(wxlibname)
 
 
 def extraLdflags(wxlibname):
-    if wxlibname in EXTRALIBS:
-        return EXTRALIBS[wxlibname]
-    else:
-        return ''
+    return EXTRALIBS[wxlibname] if wxlibname in EXTRALIBS else ''
 
 wxVersion = None
 VERSION_FILE = '../../include/wx/version.h'
@@ -104,10 +97,9 @@ VERSION_FILE = '../../include/wx/version.h'
 def getVersion():
     """Returns wxWidgets version as a tuple: (major,minor,release)."""
     global wxVersion
-    if wxVersion == None:
-        f = open(VERSION_FILE, 'rt')
-        lines = f.readlines()
-        f.close()
+    if wxVersion is None:
+        with open(VERSION_FILE, 'rt') as f:
+            lines = f.readlines()
         major = minor = release = None
         for l in lines:
             if not l.startswith('#define'): continue
@@ -116,10 +108,13 @@ def getVersion():
             if len(splitline) < 3: continue
             name = splitline[1]
             value = splitline[2]
-            if value == None: continue
-            if name == 'wxMAJOR_VERSION': major = int(value)
-            if name == 'wxMINOR_VERSION': minor = int(value)
-            if name == 'wxRELEASE_NUMBER': release = int(value)
+            if value is None: continue
+            if name == 'wxMAJOR_VERSION':
+                major = int(value)
+            elif name == 'wxMINOR_VERSION':
+                minor = int(value)
+            elif name == 'wxRELEASE_NUMBER':
+                release = int(value)
             if major != None and minor != None and release != None:
                 break
         wxVersion = (major, minor, release)
@@ -146,7 +141,8 @@ def headersOnly(files):
         for s in sources.split():
             if s.endswith('.h'):
                 retval.append(s)
-        return '%s%s%s' % (prf, ' '.join(retval), suf)
+        return f"{prf}{' '.join(retval)}{suf}"
+
     return utils.substitute2(files, callback)
 
 

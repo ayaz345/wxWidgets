@@ -7,5 +7,5 @@
 from utils import addSubstituteCallback
 
 def __noopSubst(name, func, caller):
-    return '$(%s)' % name
+    return f'$({name})'
 addSubstituteCallback('COMPILER_PREFIX', __noopSubst)

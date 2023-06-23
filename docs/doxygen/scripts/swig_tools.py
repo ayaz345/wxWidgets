@@ -18,7 +18,7 @@ class SWIGBuilder:
                 #print "Skipping %s" % aclass.name
                 continue
 
-            filename = os.path.join(output_dir, "_" + header_name + ".i")
+            filename = os.path.join(output_dir, f"_{header_name}.i")
             enums_text = make_enums(aclass)
             method_text = self.make_swig_methods(aclass)
             text = """
@@ -33,9 +33,8 @@ public:
 };
 """ % (enums_text, aclass.name, get_first_value(aclass.bases), method_text)
 
-            afile = open(filename, "wb")
-            afile.write(text)
-            afile.close()
+            with open(filename, "wb") as afile:
+                afile.write(text)
 
 
     def make_swig_methods(self, aclass):
